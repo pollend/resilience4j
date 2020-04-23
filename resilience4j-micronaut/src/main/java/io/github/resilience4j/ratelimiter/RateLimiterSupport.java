@@ -11,14 +11,14 @@ import java.util.Optional;
 
 @Singleton
 public class RateLimiterSupport {
-    private final RateLimitingConfiguration configuration;
+    private final RateLimiterProperties configuration;
 
     /**
      * Default constructor.
      *
      * @param configuration The rate limiting configuration
      */
-    public RateLimiterSupport(RateLimitingConfiguration configuration) {
+    public RateLimiterSupport(RateLimiterProperties configuration) {
         this.configuration = configuration;
     }
 
