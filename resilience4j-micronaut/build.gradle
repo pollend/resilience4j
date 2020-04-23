@@ -1,0 +1,25 @@
+dependencies {
+    annotationProcessor(platform(libraries.micronaut))
+    testAnnotationProcessor(platform(libraries.micronaut))
+    implementation(platform(libraries.micronaut))
+
+    compileOnly "io.micronaut:micronaut-http"
+    compileOnly "io.micronaut:micronaut-http-server"
+    implementation "io.micronaut:micronaut-validation"
+    implementation "io.micronaut:micronaut-router"
+
+    compileOnly project(':resilience4j-circuitbreaker')
+    compileOnly project(':resilience4j-ratelimiter')
+    compileOnly project(':resilience4j-timelimiter')
+    compileOnly project(':resilience4j-retry')
+    compileOnly project(':resilience4j-bulkhead')
+    compileOnly project(':resilience4j-annotations')
+
+    testCompile project(':resilience4j-circuitbreaker')
+    testCompile project(':resilience4j-ratelimiter')
+    testCompile project(':resilience4j-timelimiter')
+    testCompile project(':resilience4j-bulkhead')
+    testCompile project(':resilience4j-retry')
+    testCompile project(':resilience4j-annotations')
+}
+ext.moduleName = 'io.github.resilience4j.micronaut'
