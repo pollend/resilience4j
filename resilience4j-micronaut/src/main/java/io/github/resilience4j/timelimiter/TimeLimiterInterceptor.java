@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.github.resilience4j.timelimiter;
 
-package io.github.resilience4j.bulkhead;
-
-import io.github.resilience4j.bulkhead.operator.BulkheadOperator;
+import io.github.resilience4j.BaseInterceptor;
 import io.github.resilience4j.fallback.UnhandledFallbackException;
-import io.micronaut.aop.InterceptPhase;
+import io.github.resilience4j.timelimiter.transformer.TimeLimiterTransformer;
 import io.micronaut.aop.MethodInterceptor;
 import io.micronaut.aop.MethodInvocationContext;
 import io.micronaut.context.BeanContext;
@@ -41,39 +40,34 @@ import javax.inject.Singleton;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
-/**
- * A {@link MethodInterceptor} that intercepts all method calls which are annotated with a {@link io.github.resilience4j.annotation.Bulkhead}
- * annotation.
- **/
 @Singleton
-@Requires(classes = BulkheadRegistry.class)
-public class BulkheadSpecificationInterceptor implements MethodInterceptor<Object,Object> {
-    private static final Logger LOG = LoggerFactory.getLogger(BulkheadSpecificationInterceptor.class);
+@Internal
+@Requires(classes = TimeLimiterRegistry.class)
+public class TimeLimiterInterceptor extends BaseInterceptor implements MethodInterceptor<Object,Object> {
+    private static final Logger LOG = LoggerFactory.getLogger(TimeLimiterInterceptor.class);
 
+    private final TimeLimiterRegistry timeLimiterRegistry;
+    private final BeanContext beanContext;
+    private static final ScheduledExecutorService timeLimiterExecutorService = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     /**
-     * Positioned before the {@link io.github.resilience4j.annotation.Bulkhead} interceptor after {@link io.micronaut.retry.annotation.Fallback}.
+     * Positioned before the {@link io.github.resilience4j.annotation.CircuitBreaker} interceptor after {@link io.micronaut.retry.annotation.Fallback}.
      */
     public static final int POSITION = RecoveryInterceptor.POSITION + 20;
 
-    private final BulkheadRegistry bulkheadRegistry;
-    private final BeanContext beanContext;
-
-    /**
-     *
-     * @param beanContext The bean context to allow for DI of class annotated with {@link javax.inject.Inject}.
-     * @param bulkheadRegistry bulkhead registry used to retrieve {@link Bulkhead} by name
-     */
-    public BulkheadSpecificationInterceptor(BeanContext beanContext, BulkheadRegistry bulkheadRegistry) {
-        this.bulkheadRegistry = bulkheadRegistry;
+    public TimeLimiterInterceptor(BeanContext beanContext, TimeLimiterRegistry timeLimiterRegistry) {
         this.beanContext = beanContext;
+        this.timeLimiterRegistry = timeLimiterRegistry;
     }
 
     @Override
     public int getOrder() {
         return POSITION;
     }
+
 
     /**
      * Finds a fallback method for the given context.
@@ -83,39 +77,39 @@ public class BulkheadSpecificationInterceptor implements MethodInterceptor<Objec
      */
     public Optional<? extends MethodExecutionHandle<?, Object>> findFallbackMethod(MethodInvocationContext<Object, Object> context) {
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.annotation.Bulkhead.class, "fallbackMethod").orElse("");
+        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.annotation.TimeLimiter.class, "fallbackMethod").orElse("");
         Class<?> declaringType = context.getDeclaringType();
         return beanContext.findExecutionHandle(declaringType, fallbackMethod, context.getArgumentTypes());
     }
 
     @Override
     public Object intercept(MethodInvocationContext<Object, Object> context) {
-
-        Optional<AnnotationValue<io.github.resilience4j.annotation.Bulkhead>> opt = context.findAnnotation(io.github.resilience4j.annotation.Bulkhead.class);
+        Optional<AnnotationValue<io.github.resilience4j.annotation.TimeLimiter>> opt = context.findAnnotation(io.github.resilience4j.annotation.TimeLimiter.class);
         if (!opt.isPresent()) {
             return context.proceed();
         }
 
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String name = executableMethod.stringValue(io.github.resilience4j.annotation.Bulkhead.class).orElse("default");
+        final String name = executableMethod.stringValue(io.github.resilience4j.annotation.TimeLimiter.class).orElse("default");
+        TimeLimiter timeLimiter = this.timeLimiterRegistry.timeLimiter(name);
 
-        Bulkhead bulkhead = this.bulkheadRegistry.bulkhead(name);
         ReturnType<Object> rt = context.getReturnType();
         Class<Object> returnType = rt.getType();
+
         if (CompletionStage.class.isAssignableFrom(returnType)) {
-            return  handleFuture(context,bulkhead);
+            return handleFuture(context, timeLimiter);
         } else if (Publishers.isConvertibleToPublisher(returnType)) {
-            return handlerForReactiveType(context,bulkhead);
+            return handlerForReactiveType(context, timeLimiter);
         }
         try {
-            return bulkhead.executeSupplier(context::proceed);
+            return timeLimiter.executeFutureSupplier(
+                () -> CompletableFuture.supplyAsync(context::proceed));
         } catch (RuntimeException exception) {
             return resolveFallback(context, exception);
         } catch (Throwable throwable) {
             throw new UnhandledFallbackException("Error invoking fallback for type [" + context.getTarget().getClass().getName() + "]: " + throwable.getMessage(), throwable);
         }
     }
-
 
     /**
      * Resolves a fallback for the given execution context and exception.
@@ -153,7 +147,7 @@ public class BulkheadSpecificationInterceptor implements MethodInterceptor<Objec
     }
 
 
-    private Object handlerForReactiveType(MethodInvocationContext<Object, Object> context, Bulkhead bulkhead) {
+    private Object handlerForReactiveType(MethodInvocationContext<Object, Object> context, TimeLimiter timeLimiter) {
         Object result = context.proceed();
         if (result == null) {
             return result;
@@ -161,7 +155,7 @@ public class BulkheadSpecificationInterceptor implements MethodInterceptor<Objec
         Flowable<Object> flowable = ConversionService.SHARED
             .convert(result, Flowable.class)
             .orElseThrow(() -> new UnhandledFallbackException("Unsupported Reactive type: " + result));
-        flowable = flowable.compose(BulkheadOperator.of(bulkhead)).onErrorResumeNext(throwable -> {
+        flowable = flowable.compose(TimeLimiterTransformer.of(timeLimiter)).onErrorResumeNext(throwable -> {
             Optional<? extends MethodExecutionHandle<?, Object>> fallbackMethod = findFallbackMethod(context);
             if (fallbackMethod.isPresent()) {
                 MethodExecutionHandle<?, Object> fallbackHandle = fallbackMethod.get();
@@ -188,13 +182,13 @@ public class BulkheadSpecificationInterceptor implements MethodInterceptor<Objec
             .orElseThrow(() -> new UnhandledFallbackException("Unsupported Reactive type: " + result));
     }
 
-    private Object handleFuture(MethodInvocationContext<Object, Object> context, Bulkhead bulkhead) {
+    private Object handleFuture(MethodInvocationContext<Object, Object> context, TimeLimiter timeLimiter) {
         Object result = context.proceed();
         if (result == null) {
             return result;
         }
         CompletableFuture<Object> newFuture = new CompletableFuture<>();
-        bulkhead.executeCompletionStage(() -> ((CompletableFuture<?>) result)).whenComplete((o, throwable) -> {
+        timeLimiter.executeCompletionStage(timeLimiterExecutorService, () -> ((CompletableFuture<?>) result)).whenComplete((o, throwable) -> {
             if (throwable == null) {
                 newFuture.complete(o);
             } else {

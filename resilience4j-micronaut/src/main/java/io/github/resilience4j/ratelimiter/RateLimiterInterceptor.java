@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.resilience4j.timelimiter;
+package io.github.resilience4j.ratelimiter;
 
 import io.github.resilience4j.fallback.UnhandledFallbackException;
-import io.github.resilience4j.timelimiter.transformer.TimeLimiterTransformer;
+import io.github.resilience4j.ratelimiter.operator.RateLimiterOperator;
 import io.micronaut.aop.MethodInterceptor;
 import io.micronaut.aop.MethodInvocationContext;
 import io.micronaut.context.BeanContext;
@@ -39,34 +39,30 @@ import javax.inject.Singleton;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 @Singleton
 @Internal
-@Requires(classes = TimeLimiterRegistry.class)
-public class TimeLimiterSpecificationInterceptor implements MethodInterceptor<Object,Object> {
-    private static final Logger LOG = LoggerFactory.getLogger(TimeLimiterSpecificationInterceptor.class);
+@Requires(classes = RateLimiterRegistry.class)
+public class RateLimiterInterceptor implements MethodInterceptor<Object, Object> {
+    private static final Logger LOG = LoggerFactory.getLogger(RateLimiterInterceptor.class);
 
-    private final TimeLimiterRegistry timeLimiterRegistry;
+    private final RateLimiterRegistry rateLimiterRegistry;
     private final BeanContext beanContext;
-    private static final ScheduledExecutorService timeLimiterExecutorService = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     /**
      * Positioned before the {@link io.github.resilience4j.annotation.CircuitBreaker} interceptor after {@link io.micronaut.retry.annotation.Fallback}.
      */
     public static final int POSITION = RecoveryInterceptor.POSITION + 20;
 
-    public TimeLimiterSpecificationInterceptor(BeanContext beanContext, TimeLimiterRegistry timeLimiterRegistry) {
+    public RateLimiterInterceptor(BeanContext beanContext, RateLimiterRegistry rateLimiterRegistry) {
+        this.rateLimiterRegistry = rateLimiterRegistry;
         this.beanContext = beanContext;
-        this.timeLimiterRegistry = timeLimiterRegistry;
     }
 
     @Override
     public int getOrder() {
         return POSITION;
     }
-
 
     /**
      * Finds a fallback method for the given context.
@@ -76,33 +72,32 @@ public class TimeLimiterSpecificationInterceptor implements MethodInterceptor<Ob
      */
     public Optional<? extends MethodExecutionHandle<?, Object>> findFallbackMethod(MethodInvocationContext<Object, Object> context) {
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.annotation.TimeLimiter.class, "fallbackMethod").orElse("");
+        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.annotation.RateLimiter.class, "fallbackMethod").orElse("");
         Class<?> declaringType = context.getDeclaringType();
         return beanContext.findExecutionHandle(declaringType, fallbackMethod, context.getArgumentTypes());
     }
 
+
     @Override
     public Object intercept(MethodInvocationContext<Object, Object> context) {
-        Optional<AnnotationValue<io.github.resilience4j.annotation.TimeLimiter>> opt = context.findAnnotation(io.github.resilience4j.annotation.TimeLimiter.class);
+        Optional<AnnotationValue<io.github.resilience4j.annotation.RateLimiter>> opt = context.findAnnotation(io.github.resilience4j.annotation.RateLimiter.class);
         if (!opt.isPresent()) {
             return context.proceed();
         }
 
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String name = executableMethod.stringValue(io.github.resilience4j.annotation.TimeLimiter.class).orElse("default");
-        TimeLimiter timeLimiter = this.timeLimiterRegistry.timeLimiter(name);
+        final String name = executableMethod.stringValue(io.github.resilience4j.annotation.RateLimiter.class).orElse("default");
+        RateLimiter rateLimiter = this.rateLimiterRegistry.rateLimiter(name);
 
         ReturnType<Object> rt = context.getReturnType();
         Class<Object> returnType = rt.getType();
-
         if (CompletionStage.class.isAssignableFrom(returnType)) {
-            return handleFuture(context, timeLimiter);
+            return handleFuture(context, rateLimiter);
         } else if (Publishers.isConvertibleToPublisher(returnType)) {
-            return handlerForReactiveType(context, timeLimiter);
+            return handlerForReactiveType(context, rateLimiter);
         }
         try {
-            return timeLimiter.executeFutureSupplier(
-                () -> CompletableFuture.supplyAsync(context::proceed));
+            return RateLimiter.decorateCheckedSupplier(rateLimiter, context::proceed).apply();
         } catch (RuntimeException exception) {
             return resolveFallback(context, exception);
         } catch (Throwable throwable) {
@@ -145,8 +140,7 @@ public class TimeLimiterSpecificationInterceptor implements MethodInterceptor<Ob
         }
     }
 
-
-    private Object handlerForReactiveType(MethodInvocationContext<Object, Object> context, TimeLimiter timeLimiter) {
+    private Object handlerForReactiveType(MethodInvocationContext<Object, Object> context, RateLimiter rateLimiter) {
         Object result = context.proceed();
         if (result == null) {
             return result;
@@ -154,7 +148,7 @@ public class TimeLimiterSpecificationInterceptor implements MethodInterceptor<Ob
         Flowable<Object> flowable = ConversionService.SHARED
             .convert(result, Flowable.class)
             .orElseThrow(() -> new UnhandledFallbackException("Unsupported Reactive type: " + result));
-        flowable = flowable.compose(TimeLimiterTransformer.of(timeLimiter)).onErrorResumeNext(throwable -> {
+        flowable = flowable.compose(RateLimiterOperator.of(rateLimiter)).onErrorResumeNext(throwable -> {
             Optional<? extends MethodExecutionHandle<?, Object>> fallbackMethod = findFallbackMethod(context);
             if (fallbackMethod.isPresent()) {
                 MethodExecutionHandle<?, Object> fallbackHandle = fallbackMethod.get();
@@ -181,13 +175,13 @@ public class TimeLimiterSpecificationInterceptor implements MethodInterceptor<Ob
             .orElseThrow(() -> new UnhandledFallbackException("Unsupported Reactive type: " + result));
     }
 
-    private Object handleFuture(MethodInvocationContext<Object, Object> context, TimeLimiter timeLimiter) {
+    private Object handleFuture(MethodInvocationContext<Object, Object> context, RateLimiter rateLimiter) {
         Object result = context.proceed();
         if (result == null) {
             return result;
         }
         CompletableFuture<Object> newFuture = new CompletableFuture<>();
-        timeLimiter.executeCompletionStage(timeLimiterExecutorService, () -> ((CompletableFuture<?>) result)).whenComplete((o, throwable) -> {
+        rateLimiter.executeCompletionStage(() -> ((CompletableFuture<?>) result)).whenComplete((o, throwable) -> {
             if (throwable == null) {
                 newFuture.complete(o);
             } else {

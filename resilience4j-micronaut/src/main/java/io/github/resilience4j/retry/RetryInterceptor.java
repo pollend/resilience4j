@@ -45,9 +45,9 @@ import java.util.concurrent.ScheduledExecutorService;
 @Singleton
 @Internal
 @Requires(classes = RetryRegistry.class)
-public class RetrySpecificationInterceptor implements MethodInterceptor<Object,Object> {
+public class RetryInterceptor implements MethodInterceptor<Object,Object> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RetrySpecificationInterceptor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RetryInterceptor.class);
 
     private final RetryRegistry retryRegistry;
     private final BeanContext beanContext;
@@ -58,7 +58,7 @@ public class RetrySpecificationInterceptor implements MethodInterceptor<Object,O
      */
     public static final int POSITION = RecoveryInterceptor.POSITION + 20;
 
-    public RetrySpecificationInterceptor(BeanContext beanContext, RetryRegistry retryRegistry) {
+    public RetryInterceptor(BeanContext beanContext, RetryRegistry retryRegistry) {
         this.retryRegistry = retryRegistry;
         this.beanContext = beanContext;
     }
