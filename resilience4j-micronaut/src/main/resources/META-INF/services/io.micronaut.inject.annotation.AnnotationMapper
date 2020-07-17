@@ -1,0 +1,5 @@
+io.github.resilience4j.bulkhead.BulkheadAnnotationMapper
+io.github.resilience4j.circuitbreaker.CircuitBreakerAnnotationMapper
+io.github.resilience4j.ratelimiter.RateLimiterAnnotationMapper
+io.github.resilience4j.retry.RetryAnnotationMapper
+io.github.resilience4j.timelimiter.TimeLimiterAnnotationMapper

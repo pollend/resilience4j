@@ -19,7 +19,6 @@ import io.github.resilience4j.BaseInterceptor;
 import io.github.resilience4j.ResilienceInterceptPhase;
 import io.github.resilience4j.circuitbreaker.operator.CircuitBreakerOperator;
 import io.github.resilience4j.fallback.UnhandledFallbackException;
-import io.micronaut.aop.InterceptPhase;
 import io.micronaut.aop.MethodInterceptor;
 import io.micronaut.aop.MethodInvocationContext;
 import io.micronaut.context.BeanContext;
@@ -30,7 +29,6 @@ import io.micronaut.core.convert.ConversionService;
 import io.micronaut.core.type.ReturnType;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.MethodExecutionHandle;
-import io.micronaut.retry.intercept.RecoveryInterceptor;
 import io.reactivex.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,20 +66,20 @@ public class CircuitBreakerInterceptor extends BaseInterceptor implements Method
     @Override
     public Optional<? extends MethodExecutionHandle<?, Object>> findFallbackMethod(MethodInvocationContext<Object, Object> context) {
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.annotation.CircuitBreaker.class, "fallbackMethod").orElse("");
+        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker.class, "fallbackMethod").orElse("");
         Class<?> declaringType = context.getDeclaringType();
         return beanContext.findExecutionHandle(declaringType, fallbackMethod, context.getArgumentTypes());
     }
 
     @Override
     public Object intercept(MethodInvocationContext<Object, Object> context) {
-        Optional<AnnotationValue<io.github.resilience4j.annotation.CircuitBreaker>> opt = context.findAnnotation(io.github.resilience4j.annotation.CircuitBreaker.class);
+        Optional<AnnotationValue<io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker>> opt = context.findAnnotation(io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker.class);
         if (!opt.isPresent()) {
             return context.proceed();
         }
 
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String name = executableMethod.stringValue(io.github.resilience4j.annotation.CircuitBreaker.class,"name").orElse("default");
+        final String name = executableMethod.stringValue(io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker.class,"name").orElse("default");
         CircuitBreaker circuitBreaker = this.circuitBreakerRegistry.circuitBreaker(name);
 
         ReturnType<Object> rt = context.getReturnType();

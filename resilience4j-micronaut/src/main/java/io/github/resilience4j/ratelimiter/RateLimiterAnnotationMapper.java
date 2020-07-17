@@ -15,36 +15,44 @@
  */
 package io.github.resilience4j.ratelimiter;
 
-import io.github.resilience4j.annotation.Bulkhead;
-import io.github.resilience4j.annotation.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterInterceptor;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.micronaut.aop.Around;
+import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.annotation.NamedAnnotationMapper;
+import io.micronaut.inject.annotation.TypedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
 
 import javax.annotation.Nonnull;
 import java.lang.annotation.Annotation;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * An annotation mapper that maps {@link RateLimiter}.
  */
-@Internal
-public class RateLimiterAnnotationMapper implements NamedAnnotationMapper {
-    @Nonnull
+public class RateLimiterAnnotationMapper implements TypedAnnotationMapper<RateLimiter> {
+
     @Override
-    public String getName() {
-        return "io.github.resilience4j.annotation.RateLimiter";
+    public Class<RateLimiter> annotationType() {
+        return RateLimiter.class;
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+    public List<AnnotationValue<?>> map(AnnotationValue<RateLimiter> annotation, VisitorContext visitorContext) {
         final AnnotationValueBuilder<RateLimiter> builder = AnnotationValue.builder(RateLimiter.class);
         annotation.stringValue("name").ifPresent(c -> builder.member("name", c));
         annotation.stringValue("fallbackMethod").ifPresent(c -> builder.member("fallbackMethod", c));
-        AnnotationValue<RateLimiter> ann = builder.build();
-        return Collections.singletonList(ann);
+
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class)
+            .member("value", RateLimiterInterceptor.class);
+        final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
+
+        return Arrays.asList(builder.build(),
+            typeBuilder.build(),
+            aroundBuilder.build());
     }
 }

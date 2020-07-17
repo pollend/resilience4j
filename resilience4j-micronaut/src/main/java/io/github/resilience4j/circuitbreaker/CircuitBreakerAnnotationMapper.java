@@ -15,36 +15,40 @@
  */
 package io.github.resilience4j.circuitbreaker;
 
-import io.github.resilience4j.annotation.Bulkhead;
-import io.github.resilience4j.annotation.CircuitBreaker;
+import io.micronaut.aop.Around;
+import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.annotation.NamedAnnotationMapper;
+import io.micronaut.inject.annotation.TypedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
+import io.micronaut.retry.annotation.CircuitBreaker;
 
-import javax.annotation.Nonnull;
-import java.lang.annotation.Annotation;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * An annotation mapper that maps {@link CircuitBreaker}.
  */
-@Internal
-public class CircuitBreakerAnnotationMapper implements NamedAnnotationMapper {
-    @Nonnull
+public class CircuitBreakerAnnotationMapper implements TypedAnnotationMapper<CircuitBreaker> {
+
     @Override
-    public String getName() {
-        return "io.github.resilience4j.annotation.CircuitBreaker";
+    public Class<CircuitBreaker> annotationType() {
+        return CircuitBreaker.class;
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+    public List<AnnotationValue<?>> map(AnnotationValue<CircuitBreaker> annotation, VisitorContext visitorContext) {
         final AnnotationValueBuilder<CircuitBreaker> builder = AnnotationValue.builder(CircuitBreaker.class);
         annotation.stringValue("fallbackMethod").ifPresent(c -> builder.member("fallbackMethod", c));
         annotation.stringValue("name").ifPresent(c -> builder.member("name", c));
-        AnnotationValue<CircuitBreaker> ann = builder.build();
-        return Collections.singletonList(ann);
+
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class)
+            .member("value", CircuitBreakerInterceptor.class);
+
+        final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
+
+        return Arrays.asList(builder.build(),
+            typeBuilder.build(),
+            aroundBuilder.build());
     }
 }

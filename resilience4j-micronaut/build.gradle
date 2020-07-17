@@ -4,17 +4,13 @@ repositories {
     maven { url "https://oss.jfrog.org/oss-snapshot-local" }
 }
 dependencies {
+
+    implementation(platform(libraries.micronaut))
     annotationProcessor(platform(libraries.micronaut))
     testAnnotationProcessor(platform(libraries.micronaut))
-    implementation(platform(libraries.micronaut))
+
     annotationProcessor "io.micronaut:micronaut-inject-java"
-
-    compileOnly "io.micronaut:micronaut-http"
-    compileOnly "io.micronaut:micronaut-http-server"
-    compileOnly "io.micronaut:micronaut-aop"
-
-    implementation "io.micronaut:micronaut-validation"
-    implementation "io.micronaut:micronaut-router"
+    testAnnotationProcessor "io.micronaut:micronaut-inject-groovy"
 
     compileOnly project(':resilience4j-circuitbreaker')
     compileOnly project(':resilience4j-ratelimiter')
@@ -23,6 +19,7 @@ dependencies {
     compileOnly project(':resilience4j-rxjava2')
     compileOnly project(':resilience4j-bulkhead')
     compileOnly project(':resilience4j-consumer')
+    compileOnly project(':resilience4j-annotations')
     compile project(':resilience4j-framework-common')
 
     testCompile project(':resilience4j-circuitbreaker')
@@ -31,10 +28,21 @@ dependencies {
     testCompile project(':resilience4j-bulkhead')
     testCompile project(':resilience4j-retry')
     testCompile project(':resilience4j-consumer')
-    testCompile "io.micronaut:micronaut-aop"
+    testCompile project(':resilience4j-annotations')
 
+    compileOnly "io.micronaut:micronaut-http"
+    compileOnly "io.micronaut:micronaut-http-server"
+    compileOnly "io.micronaut:micronaut-aop"
+    compileOnly "io.micronaut:micronaut-inject"
+
+    implementation "io.micronaut:micronaut-validation"
+    implementation "io.micronaut:micronaut-router"
+
+    testImplementation "io.micronaut:micronaut-aop"
     testImplementation "io.micronaut:micronaut-http-client"
     testImplementation "io.micronaut:micronaut-http-server-netty"
+    testImplementation "io.micronaut:micronaut-inject-groovy"
+    testImplementation "io.micronaut:micronaut-inject-java-test"
 
     testImplementation(libraries.micronaut_inject)
     testImplementation(libraries.micronaut_spock)

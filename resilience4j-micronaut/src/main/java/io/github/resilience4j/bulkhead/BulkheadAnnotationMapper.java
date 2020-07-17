@@ -15,38 +15,42 @@
  */
 package io.github.resilience4j.bulkhead;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.micronaut.aop.Around;
+import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.annotation.NamedAnnotationMapper;
+import io.micronaut.inject.annotation.TypedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
-import io.github.resilience4j.annotation.Bulkhead;
 
-import javax.annotation.Nonnull;
-import java.lang.annotation.Annotation;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * An annotation mapper that maps {@link Bulkhead}.
  */
-@Internal
-public class BulkheadAnnotationMapper implements NamedAnnotationMapper {
-    @Nonnull
+public class BulkheadAnnotationMapper implements TypedAnnotationMapper<Bulkhead> {
+
     @Override
-    public String getName() {
-        return "io.github.resilience4j.annotation.Bulkhead";
+    public Class<Bulkhead> annotationType() {
+        return Bulkhead.class;
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+    public List<AnnotationValue<?>> map(AnnotationValue<Bulkhead> annotation, VisitorContext visitorContext) {
         final AnnotationValueBuilder<Bulkhead> builder = AnnotationValue.builder(Bulkhead.class).value(Bulkhead.Type.SEMAPHORE);
         annotation.enumValue("type", Bulkhead.Type.class).ifPresent(c ->
             builder.member("type", c)
         );
         annotation.stringValue("fallbackMethod").ifPresent(s -> builder.member("fallbackMethod", s));
         annotation.stringValue("name").ifPresent(c -> builder.member("name", c));
-        AnnotationValue<Bulkhead> ann = builder.build();
-        return Collections.singletonList(ann);
+
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class)
+            .member("value", BulkheadInterceptor.class, ThreadPoolBulkheadInterceptor.class);
+        final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
+
+        return Arrays.asList(builder.build(),
+            typeBuilder.build(),
+            aroundBuilder.build());
     }
 }
