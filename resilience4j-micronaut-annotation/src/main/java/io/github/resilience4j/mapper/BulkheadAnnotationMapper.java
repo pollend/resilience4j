@@ -15,36 +15,43 @@
  */
 package io.github.resilience4j.mapper;
 
-import io.github.resilience4j.retry.RetryInterceptor;
-import io.github.resilience4j.retry.annotation.Retry;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.micronaut.aop.Around;
 import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
-import io.micronaut.core.annotation.Internal;
+import io.micronaut.inject.annotation.NamedAnnotationMapper;
 import io.micronaut.inject.annotation.TypedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
 
+import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * An annotation mapper that maps {@link Retry}.
+ * An annotation mapper that maps {@link Bulkhead}.
  */
-public final class RetryAnnotationMapper  implements TypedAnnotationMapper<Retry> {
+public final class BulkheadAnnotationMapper implements NamedAnnotationMapper {
 
+    @NonNull
     @Override
-    public Class<Retry> annotationType() {
-        return Retry.class;
+    public String getName() {
+        return "io.github.resilience4j.bulkhead.annotation.Bulkhead";
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<Retry> annotation, VisitorContext visitorContext) {
-        final AnnotationValueBuilder<Retry> builder = AnnotationValue.builder(Retry.class);
+    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+        final AnnotationValueBuilder<Bulkhead> builder = AnnotationValue.builder(Bulkhead.class).value(Bulkhead.Type.SEMAPHORE);
+        annotation.enumValue("type", Bulkhead.Type.class).ifPresent(c ->
+            builder.member("type", c)
+        );
         annotation.stringValue("fallbackMethod").ifPresent(s -> builder.member("fallbackMethod", s));
         annotation.stringValue("name").ifPresent(c -> builder.member("name", c));
 
-        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value", RetryInterceptor.class);
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value",
+            "io.github.resilience4j.bulkhead.BulkheadInterceptor",
+            "io.github.resilience4j.bulkhead.ThreadPoolBulkheadInterceptor");
         final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
         return Arrays.asList(builder.build(), typeBuilder.build(), aroundBuilder.build());
     }

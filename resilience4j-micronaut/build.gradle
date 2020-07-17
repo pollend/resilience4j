@@ -7,7 +7,9 @@ dependencies {
     annotationProcessor(platform(libraries.micronaut))
     testAnnotationProcessor(platform(libraries.micronaut))
     implementation(platform(libraries.micronaut))
+
     annotationProcessor "io.micronaut:micronaut-inject-java"
+    annotationProcessor project(":resilience4j-micronaut-annotation")
 
     compileOnly "io.micronaut:micronaut-http"
     compileOnly "io.micronaut:micronaut-http-server"
@@ -50,8 +52,5 @@ dependencies {
     testImplementation (libraries.groovy_test)
     testImplementation "io.micronaut:micronaut-http-client"
     testImplementation "io.micronaut:micronaut-http-server-netty"
-
-
-    testAnnotationProcessor "io.micronaut:micronaut-inject-groovy"
 }
 ext.moduleName = 'io.github.resilience4j.micronaut'

@@ -15,36 +15,38 @@
  */
 package io.github.resilience4j.mapper;
 
-import io.github.resilience4j.timelimiter.TimeLimiterInterceptor;
-import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.micronaut.aop.Around;
 import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.annotation.TypedAnnotationMapper;
+import io.micronaut.inject.annotation.NamedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
 
+import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * An annotation mapper that maps {@link TimeLimiter}.
+ * An annotation mapper that maps {@link Retry}.
  */
-public final class TimeLimiterAnnotationMapper implements TypedAnnotationMapper<TimeLimiter> {
+public final class RetryAnnotationMapper  implements NamedAnnotationMapper {
 
+
+    @NonNull
     @Override
-    public Class<TimeLimiter> annotationType() {
-        return TimeLimiter.class;
+    public String getName() {
+        return "io.github.resilience4j.retry.annotation.Retry";
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<TimeLimiter> annotation, VisitorContext visitorContext) {
-        final AnnotationValueBuilder<TimeLimiter> builder = AnnotationValue.builder(TimeLimiter.class);
-        annotation.stringValue("fallbackMethod").ifPresent(c -> builder.member("fallbackMethod", c));
-        AnnotationValue<TimeLimiter> ann = builder.build();
+    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+        final AnnotationValueBuilder<Retry> builder = AnnotationValue.builder(Retry.class);
+        annotation.stringValue("fallbackMethod").ifPresent(s -> builder.member("fallbackMethod", s));
+        annotation.stringValue("name").ifPresent(c -> builder.member("name", c));
 
-        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value", TimeLimiterInterceptor.class);
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value", "io.github.resilience4j.retry.RetryInterceptor");
         final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
         return Arrays.asList(builder.build(), typeBuilder.build(), aroundBuilder.build());
     }

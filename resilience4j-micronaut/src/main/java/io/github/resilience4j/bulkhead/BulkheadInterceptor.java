@@ -30,7 +30,6 @@ import io.micronaut.core.convert.ConversionService;
 import io.micronaut.core.type.ReturnType;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.MethodExecutionHandle;
-import io.micronaut.retry.intercept.RecoveryInterceptor;
 import io.reactivex.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +45,7 @@ import java.util.concurrent.CompletionStage;
  **/
 @Singleton
 @Requires(beans = BulkheadRegistry.class)
-public class BulkheadInterceptor extends BaseInterceptor implements MethodInterceptor<Object,Object>{
+public class BulkheadInterceptor extends BaseInterceptor implements MethodInterceptor<Object,Object> {
     private static final Logger LOG = LoggerFactory.getLogger(BulkheadInterceptor.class);
 
 

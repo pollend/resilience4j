@@ -1,0 +1,14 @@
+apply plugin: 'groovy'
+repositories {
+    maven { url "https://repo.grails.org/grails/core" }
+    maven { url "https://oss.jfrog.org/oss-snapshot-local" }
+}
+dependencies {
+//    annotationProcessor(platform(libraries.micrometerVersion))
+//    implementation(platform(libraries.micronaut))
+    annotationProcessor "io.micronaut:micronaut-inject-java:$micronautVersion"
+
+    compileOnly project(':resilience4j-annotations')
+    compileOnly "io.micronaut:micronaut-aop:$micronautVersion"
+}
+ext.moduleName = 'io.github.resilience4j.micronaut.processor'

@@ -15,37 +15,37 @@
  */
 package io.github.resilience4j.mapper;
 
-import io.github.resilience4j.circuitbreaker.CircuitBreakerInterceptor;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.micronaut.aop.Around;
 import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.annotation.TypedAnnotationMapper;
+import io.micronaut.inject.annotation.NamedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
 
+import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * An annotation mapper that maps {@link CircuitBreaker}.
+ * An annotation mapper that maps {@link RateLimiter}.
  */
-public final class CircuitBreakerAnnotationMapper implements TypedAnnotationMapper<CircuitBreaker> {
+public final class RateLimiterAnnotationMapper implements NamedAnnotationMapper {
 
+    @NonNull
     @Override
-    public Class<CircuitBreaker> annotationType() {
-        return CircuitBreaker.class;
+    public String getName() {
+        return "io.github.resilience4j.ratelimiter.annotation.RateLimiter";
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<CircuitBreaker> annotation, VisitorContext visitorContext) {
-        final AnnotationValueBuilder<CircuitBreaker> builder = AnnotationValue.builder(CircuitBreaker.class);
-        annotation.stringValue("fallbackMethod").ifPresent(c -> builder.member("fallbackMethod", c));
+    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+        final AnnotationValueBuilder<RateLimiter> builder = AnnotationValue.builder(RateLimiter.class);
         annotation.stringValue("name").ifPresent(c -> builder.member("name", c));
-        AnnotationValue<CircuitBreaker> ann = builder.build();
+        annotation.stringValue("fallbackMethod").ifPresent(c -> builder.member("fallbackMethod", c));
 
-        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value", CircuitBreakerInterceptor.class);
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value", "io.github.resilience4j.ratelimiter.RateLimiterInterceptor");
         final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
         return Arrays.asList(builder.build(), typeBuilder.build(), aroundBuilder.build());
     }

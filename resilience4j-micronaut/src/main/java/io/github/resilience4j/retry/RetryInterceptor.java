@@ -19,7 +19,6 @@ import io.github.resilience4j.BaseInterceptor;
 import io.github.resilience4j.ResilienceInterceptPhase;
 import io.github.resilience4j.fallback.UnhandledFallbackException;
 import io.github.resilience4j.retry.transformer.RetryTransformer;
-import io.micronaut.aop.InterceptPhase;
 import io.micronaut.aop.MethodInterceptor;
 import io.micronaut.aop.MethodInvocationContext;
 import io.micronaut.context.BeanContext;
