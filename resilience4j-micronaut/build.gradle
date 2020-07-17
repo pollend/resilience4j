@@ -23,6 +23,7 @@ dependencies {
     compileOnly project(':resilience4j-rxjava2')
     compileOnly project(':resilience4j-bulkhead')
     compileOnly project(':resilience4j-consumer')
+    compileOnly project(':resilience4j-annotations')
     compile project(':resilience4j-framework-common')
 
     testCompile project(':resilience4j-circuitbreaker')
@@ -31,6 +32,7 @@ dependencies {
     testCompile project(':resilience4j-bulkhead')
     testCompile project(':resilience4j-retry')
     testCompile project(':resilience4j-consumer')
+    testCompile project(':resilience4j-annotations')
     testCompile "io.micronaut:micronaut-aop"
 
     testImplementation "io.micronaut:micronaut-http-client"
@@ -48,5 +50,8 @@ dependencies {
     testImplementation (libraries.groovy_test)
     testImplementation "io.micronaut:micronaut-http-client"
     testImplementation "io.micronaut:micronaut-http-server-netty"
+
+
+    testAnnotationProcessor "io.micronaut:micronaut-inject-groovy"
 }
 ext.moduleName = 'io.github.resilience4j.micronaut'

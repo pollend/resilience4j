@@ -66,7 +66,7 @@ public class RateLimiterInterceptor extends BaseInterceptor implements MethodInt
      */
     public Optional<? extends MethodExecutionHandle<?, Object>> findFallbackMethod(MethodInvocationContext<Object, Object> context) {
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.annotation.RateLimiter.class, "fallbackMethod").orElse("");
+        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class, "fallbackMethod").orElse("");
         Class<?> declaringType = context.getDeclaringType();
         return beanContext.findExecutionHandle(declaringType, fallbackMethod, context.getArgumentTypes());
     }
@@ -74,12 +74,12 @@ public class RateLimiterInterceptor extends BaseInterceptor implements MethodInt
 
     @Override
     public Object intercept(MethodInvocationContext<Object, Object> context) {
-        Optional<AnnotationValue<io.github.resilience4j.annotation.RateLimiter>> opt = context.findAnnotation(io.github.resilience4j.annotation.RateLimiter.class);
+        Optional<AnnotationValue<io.github.resilience4j.ratelimiter.annotation.RateLimiter>> opt = context.findAnnotation(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
         if (!opt.isPresent()) {
             return context.proceed();
         }
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String name = executableMethod.stringValue(io.github.resilience4j.annotation.RateLimiter.class, "name").orElse("default");
+        final String name = executableMethod.stringValue(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class, "name").orElse("default");
         RateLimiter rateLimiter = this.rateLimiterRegistry.rateLimiter(name);
 
         ReturnType<Object> rt = context.getReturnType();

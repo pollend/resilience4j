@@ -13,37 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.resilience4j.retry;
+package io.github.resilience4j.mapper;
 
-import io.github.resilience4j.annotation.Retry;
+import io.github.resilience4j.retry.RetryInterceptor;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.micronaut.aop.Around;
+import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.annotation.NamedAnnotationMapper;
+import io.micronaut.inject.annotation.TypedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
 
-import javax.annotation.Nonnull;
-import java.lang.annotation.Annotation;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * An annotation mapper that maps {@link Retry}.
  */
-@Internal
-public class RetryAnnotationMapper  implements NamedAnnotationMapper {
-    @Nonnull
+public final class RetryAnnotationMapper  implements TypedAnnotationMapper<Retry> {
+
     @Override
-    public String getName() {
-        return "io.github.resilience4j.annotation.Retry";
+    public Class<Retry> annotationType() {
+        return Retry.class;
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+    public List<AnnotationValue<?>> map(AnnotationValue<Retry> annotation, VisitorContext visitorContext) {
         final AnnotationValueBuilder<Retry> builder = AnnotationValue.builder(Retry.class);
         annotation.stringValue("fallbackMethod").ifPresent(s -> builder.member("fallbackMethod", s));
         annotation.stringValue("name").ifPresent(c -> builder.member("name", c));
-        AnnotationValue<Retry> ann = builder.build();
-        return Collections.singletonList(ann);
+
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value", RetryInterceptor.class);
+        final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
+        return Arrays.asList(builder.build(), typeBuilder.build(), aroundBuilder.build());
     }
 }

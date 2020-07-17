@@ -13,36 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.resilience4j.timelimiter;
+package io.github.resilience4j.mapper;
 
-import io.github.resilience4j.annotation.TimeLimiter;
+import io.github.resilience4j.timelimiter.TimeLimiterInterceptor;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import io.micronaut.aop.Around;
+import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.annotation.NamedAnnotationMapper;
+import io.micronaut.inject.annotation.TypedAnnotationMapper;
 import io.micronaut.inject.visitor.VisitorContext;
 
-import javax.annotation.Nonnull;
-import java.lang.annotation.Annotation;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * An annotation mapper that maps {@link TimeLimiter}.
  */
-@Internal
-public class TimeLimiterAnnotationMapper implements NamedAnnotationMapper {
-    @Nonnull
+public final class TimeLimiterAnnotationMapper implements TypedAnnotationMapper<TimeLimiter> {
+
     @Override
-    public String getName() {
-        return "io.github.resilience4j.annotation.TimeLimiter";
+    public Class<TimeLimiter> annotationType() {
+        return TimeLimiter.class;
     }
 
     @Override
-    public List<AnnotationValue<?>> map(AnnotationValue<Annotation> annotation, VisitorContext visitorContext) {
+    public List<AnnotationValue<?>> map(AnnotationValue<TimeLimiter> annotation, VisitorContext visitorContext) {
         final AnnotationValueBuilder<TimeLimiter> builder = AnnotationValue.builder(TimeLimiter.class);
         annotation.stringValue("fallbackMethod").ifPresent(c -> builder.member("fallbackMethod", c));
         AnnotationValue<TimeLimiter> ann = builder.build();
-        return Collections.singletonList(ann);
+
+        final AnnotationValueBuilder<Type> typeBuilder = AnnotationValue.builder(Type.class).member("value", TimeLimiterInterceptor.class);
+        final AnnotationValueBuilder<Around> aroundBuilder = AnnotationValue.builder(Around.class);
+        return Arrays.asList(builder.build(), typeBuilder.build(), aroundBuilder.build());
     }
 }

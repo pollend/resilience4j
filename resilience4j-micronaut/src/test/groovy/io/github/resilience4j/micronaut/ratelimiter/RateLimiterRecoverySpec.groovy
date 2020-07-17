@@ -1,7 +1,7 @@
 package io.github.resilience4j.micronaut.ratelimiter
 
-import io.github.resilience4j.annotation.RateLimiter
 import io.github.resilience4j.micronaut.TestDummyService
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Property
 import io.micronaut.http.HttpResponse

@@ -41,7 +41,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
- * A {@link MethodInterceptor} that intercepts all method calls which are annotated with a {@link io.github.resilience4j.annotation.Bulkhead}
+ * A {@link MethodInterceptor} that intercepts all method calls which are annotated with a {@link io.github.resilience4j.bulkhead.annotation.Bulkhead}
  * annotation.
  **/
 @Singleton
@@ -78,7 +78,7 @@ public class BulkheadInterceptor extends BaseInterceptor implements MethodInterc
     @Override
     public Optional<? extends MethodExecutionHandle<?, Object>> findFallbackMethod(MethodInvocationContext<Object, Object> context) {
         ExecutableMethod executableMethod = context.getExecutableMethod();
-        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.annotation.Bulkhead.class, "fallbackMethod").orElse("");
+        final String fallbackMethod = executableMethod.stringValue(io.github.resilience4j.bulkhead.annotation.Bulkhead.class, "fallbackMethod").orElse("");
         Class<?> declaringType = context.getDeclaringType();
         return beanContext.findExecutionHandle(declaringType, fallbackMethod, context.getArgumentTypes());
     }
@@ -86,12 +86,12 @@ public class BulkheadInterceptor extends BaseInterceptor implements MethodInterc
     @Override
     public Object intercept(MethodInvocationContext<Object, Object> context) {
 
-        Optional<AnnotationValue<io.github.resilience4j.annotation.Bulkhead>> opt = context.findAnnotation(io.github.resilience4j.annotation.Bulkhead.class);
+        Optional<AnnotationValue<io.github.resilience4j.bulkhead.annotation.Bulkhead>> opt = context.findAnnotation(io.github.resilience4j.bulkhead.annotation.Bulkhead.class);
         if (!opt.isPresent()) {
             return context.proceed();
         }
-        final io.github.resilience4j.annotation.Bulkhead.Type type = opt.get().enumValue("type", io.github.resilience4j.annotation.Bulkhead.Type.class).orElse(io.github.resilience4j.annotation.Bulkhead.Type.SEMAPHORE);
-        if(type != io.github.resilience4j.annotation.Bulkhead.Type.SEMAPHORE) {
+        final io.github.resilience4j.bulkhead.annotation.Bulkhead.Type type = opt.get().enumValue("type", io.github.resilience4j.bulkhead.annotation.Bulkhead.Type.class).orElse(io.github.resilience4j.bulkhead.annotation.Bulkhead.Type.SEMAPHORE);
+        if(type != io.github.resilience4j.bulkhead.annotation.Bulkhead.Type.SEMAPHORE) {
             return context.proceed();
         }
 
